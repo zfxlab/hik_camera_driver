@@ -1,0 +1,34 @@
+# Arbitrary-length multi-camera configuration.
+# Keep sample entries disabled until serial numbers and calibration URLs are replaced.
+defaults:
+  transport: usb
+  output_encoding: rgb8
+  use_sensor_data_qos: true
+  grab_timeout_ms: 1000
+  reconnect_interval_ms: 1000
+  max_consecutive_timeouts: 5
+  sdk_buffer_count: 4
+  auto_exposure: false
+  exposure_time: 6000.0
+  auto_gain: false
+  gain: 0.0
+  frame_rate: 0.0
+  trigger_mode: "off"
+
+cameras:
+  - enabled: false
+    namespace: front_camera
+    node_name: camera
+    serial_number: "REPLACE_WITH_FRONT_SERIAL"
+    camera_name: front_camera
+    frame_id: front_camera_optical_frame
+    # Relative paths are resolved from this cameras.yaml file's directory.
+    camera_info_url: "calibration/front_camera.yaml"
+
+  - enabled: false
+    namespace: rear_camera
+    node_name: camera
+    serial_number: "REPLACE_WITH_REAR_SERIAL"
+    camera_name: rear_camera
+    frame_id: rear_camera_optical_frame
+    camera_info_url: "calibration/rear_camera.yaml"

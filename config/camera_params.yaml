@@ -1,0 +1,28 @@
+/**:
+  ros__parameters:
+    # Device identity. Set serial_number when more than one camera is connected.
+    transport: usb
+    serial_number: ""
+    user_defined_name: ""
+
+    # ROS image interface.
+    camera_name: camera
+    camera_info_url: ""
+    frame_id: camera_optical_frame
+    output_encoding: rgb8
+    use_sensor_data_qos: true
+
+    # Acquisition and recovery.
+    grab_timeout_ms: 1000
+    reconnect_interval_ms: 1000
+    max_consecutive_timeouts: 5
+    sdk_buffer_count: 4
+
+    # Camera controls.
+    auto_exposure: false
+    exposure_time: 6000.0
+    auto_gain: false
+    gain: 0.0
+    # Zero leaves the camera's frame-rate control unchanged.
+    frame_rate: 0.0
+    trigger_mode: "off"
