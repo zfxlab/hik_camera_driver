@@ -316,7 +316,12 @@ bool HikCameraNode::openAndStartCamera()
 void HikCameraNode::publishFrame(Frame & frame)
 {
   sensor_msgs::msg::Image image;
-  image.header.stamp = now();
+  auto stamp = now();
+  if (frame.received_at != std::chrono::steady_clock::time_point{}) {
+    const auto elapsed = std::chrono::steady_clock::now() - frame.received_at;
+    stamp = stamp - rclcpp::Duration(std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed));
+  }
+  image.header.stamp = stamp;
   image.header.frame_id = config_.frame_id;
   image.height = frame.height;
   image.width = frame.width;

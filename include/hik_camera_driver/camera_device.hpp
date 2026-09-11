@@ -1,3 +1,4 @@
+#include <chrono>
 #pragma once
 
 #include <MvCameraControl.h>
@@ -58,6 +59,7 @@ struct Frame
   std::uint32_t height{0};
   std::uint32_t step{0};
   std::uint32_t frame_number{0};
+  std::chrono::steady_clock::time_point received_at{};
   std::uint32_t lost_packets{0};
   std::string encoding;
 };

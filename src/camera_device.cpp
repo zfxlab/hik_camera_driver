@@ -459,6 +459,7 @@ GrabResult CameraDevice::grab(Frame & frame, const std::string & output_encoding
     error = "get image buffer failed: " + sdkErrorToString(grab_status);
     return GrabResult::kError;
   }
+  frame.received_at = std::chrono::steady_clock::now();
   FrameBufferGuard frame_guard(*api_, handle_, raw_frame);
 
   EncodingSpec spec;
