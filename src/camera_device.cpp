@@ -215,6 +215,12 @@ std::string sdkErrorToString(int code) {
     case MV_E_GC_TIMEOUT:
       description = "GenICam timeout";
       break;
+    case MV_E_ACCESS_DENIED:
+      description = "device access denied; check USB permissions or another exclusive client";
+      break;
+    case MV_E_BUSY:
+      description = "device busy or disconnected";
+      break;
     case MV_E_USB_DEVICE:
       description = "USB device error";
       break;
