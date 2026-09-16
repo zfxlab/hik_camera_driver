@@ -78,6 +78,29 @@ package://hik_camera_driver/config/calibration/front_DA123456.yaml
 `image_height` 必须与实际发布分辨率一致。`config/calibration/example_camera.yaml` 只是未
 标定的格式示例，不能作为真实内参使用。
 
+标定方法
+
+```bash
+# 单相机标定
+ros2 launch hik_camera_driver hik_camera.launch.py
+
+ros2 run camera_calibration cameracalibrator     --size 7x7     --square 0.03     --pattern circles     --ros-args -r image:=/image_raw -r camera:=/camera
+
+# 双目标定
+ros2 launch hik_camera_driver multi_camera.launch.py
+
+ros2 run camera_calibration cameracalibrator \
+  --size 7x7 \
+  --square 0.03 \
+  --pattern circles \
+  --approximate 0.005 \
+  --queue-size 10 \
+  --no-service-check \
+  --ros-args \
+  -r left:=/left_camera/image_raw \
+  -r right:=/right_camera/image_raw
+```
+
 ## 配置文件的职责
 
 - `config/camera_params.yaml` 是单相机节点的通用默认参数，由 `hik_camera.launch.py` 的

@@ -16,19 +16,18 @@ defaults:
   trigger_mode: "off"
 
 cameras:
-  - enabled: false
-    namespace: front_camera
-    node_name: camera
-    serial_number: "REPLACE_WITH_FRONT_SERIAL"
-    camera_name: front_camera
-    frame_id: front_camera_optical_frame
-    # Relative paths are resolved from this cameras.yaml file's directory.
-    camera_info_url: "calibration/front_camera.yaml"
+  - enabled: true
+    namespace: left_camera
+    node_name: driver
+    serial_number: 00DA1701234
+    camera_name: left_camera
+    frame_id: left_camera_optical_frame
+    camera_info_url: ""
 
-  - enabled: false
-    namespace: rear_camera
-    node_name: camera
-    serial_number: "REPLACE_WITH_REAR_SERIAL"
-    camera_name: rear_camera
-    frame_id: rear_camera_optical_frame
-    camera_info_url: "calibration/rear_camera.yaml"
+  - enabled: true
+    namespace: right_camera
+    node_name: driver
+    serial_number: 00DA1923281
+    camera_name: right_camera
+    frame_id: right_camera_optical_frame
+    camera_info_url: ""
