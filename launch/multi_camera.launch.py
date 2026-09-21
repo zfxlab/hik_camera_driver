@@ -7,7 +7,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import ComposableNodeContainer, Node
+from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterValue
 
 
@@ -110,8 +111,18 @@ def _as_launch_parameters(parameters):
     }
 
 
+def _launch_boolean(context, name):
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in {"true", "1", "yes", "on"}:
+        return True
+    if value in {"false", "0", "no", "off"}:
+        return False
+    raise RuntimeError(f"{name} must be true or false")
+
+
 def _launch_setup(context):
     cameras_file = LaunchConfiguration("cameras_file").perform(context)
+    use_composition = _launch_boolean(context, "use_composition")
     cameras_path = Path(
         os.path.expandvars(os.path.expanduser(cameras_file))
     ).resolve()
@@ -190,17 +201,40 @@ def _launch_setup(context):
             parameters["camera_info_url"], cameras_path.parent
         )
 
-        nodes.append(
-            Node(
-                package="hik_camera_driver",
-                executable="hik_camera_driver_node",
-                namespace=namespace,
-                name=node_name,
-                output="screen",
-                emulate_tty=True,
-                parameters=[_as_launch_parameters(parameters)],
+        if use_composition:
+            component_namespace = f"/{normalized_namespace}" if normalized_namespace else "/"
+            nodes.append(
+                ComposableNodeContainer(
+                    package="rclcpp_components",
+                    executable="component_container_mt",
+                    namespace=namespace,
+                    name="camera_pipeline",
+                    output="screen",
+                    emulate_tty=True,
+                    composable_node_descriptions=[
+                        ComposableNode(
+                            package="hik_camera_driver",
+                            plugin="hik_camera_driver::HikCameraNode",
+                            namespace=component_namespace,
+                            name=node_name,
+                            parameters=[_as_launch_parameters(parameters)],
+                            extra_arguments=[{"use_intra_process_comms": True}],
+                        )
+                    ],
+                )
             )
-        )
+        else:
+            nodes.append(
+                Node(
+                    package="hik_camera_driver",
+                    executable="hik_camera_driver_node",
+                    namespace=namespace,
+                    name=node_name,
+                    output="screen",
+                    emulate_tty=True,
+                    parameters=[_as_launch_parameters(parameters)],
+                )
+            )
 
     if not nodes:
         return [LogInfo(msg=f"No cameras are enabled in {cameras_file}")]
@@ -213,6 +247,11 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("cameras_file", default_value=default_config),
+            DeclareLaunchArgument(
+                "use_composition",
+                default_value="false",
+                description="Run each camera in an intra-process component container",
+            ),
             OpaqueFunction(function=_launch_setup),
         ]
     )
