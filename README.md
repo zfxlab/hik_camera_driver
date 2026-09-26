@@ -82,12 +82,12 @@ package://hik_camera_driver/config/calibration/front_DA123456.yaml
 
 ```bash
 # 单相机标定
-ros2 launch hik_camera_driver hik_camera.launch.py
+ros2 launch hik_camera_driver hik_camera.launch.py output_encoding:=mono8
 
 ros2 run camera_calibration cameracalibrator     --size 7x7     --square 0.03     --pattern circles     --ros-args -r image:=/image_raw -r camera:=/camera
 
 # 双目标定
-ros2 launch hik_camera_driver multi_camera.launch.py
+ros2 launch hik_camera_driver multi_camera.launch.py output_encoding:=mono8
 
 ros2 run camera_calibration cameracalibrator \
   --size 7x7 \
