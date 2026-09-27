@@ -88,6 +88,11 @@ HikCameraNode::HikCameraNode(const rclcpp::NodeOptions & options)
     "~/trigger",
     std::bind(
       &HikCameraNode::triggerCallback, this, std::placeholders::_1, std::placeholders::_2));
+  set_camera_info_service_ = create_service<sensor_msgs::srv::SetCameraInfo>(
+    "set_camera_info",
+    std::bind(
+      &HikCameraNode::setCameraInfoCallback, this, std::placeholders::_1,
+      std::placeholders::_2));
 
   parameters_callback_handle_ = add_on_set_parameters_callback(
     std::bind(&HikCameraNode::parametersCallback, this, std::placeholders::_1));
@@ -340,6 +345,7 @@ void HikCameraNode::publishFrame(Frame & frame)
 sensor_msgs::msg::CameraInfo HikCameraNode::cameraInfoFor(
   std::uint32_t width, std::uint32_t height, const std_msgs::msg::Header & header)
 {
+  std::lock_guard<std::mutex> lock(calibration_mutex_);
   sensor_msgs::msg::CameraInfo info;
   if (calibration_loaded_ && calibrated_camera_info_.width == width &&
     calibrated_camera_info_.height == height)
@@ -357,6 +363,40 @@ sensor_msgs::msg::CameraInfo HikCameraNode::cameraInfoFor(
   }
   info.header = header;
   return info;
+}
+
+void HikCameraNode::setCameraInfoCallback(
+  const std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Request> request,
+  std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Response> response)
+{
+  const auto & info = request->camera_info;
+  if (config_.camera_info_url.empty()) {
+    response->success = false;
+    response->status_message = "camera_info_url is empty; no calibration destination is configured";
+    return;
+  }
+  if (info.width == 0 || info.height == 0 || info.k[0] == 0.0 || info.k[4] == 0.0) {
+    response->success = false;
+    response->status_message = "refusing to save invalid or uncalibrated CameraInfo";
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(calibration_mutex_);
+  if (!camera_info_manager_->setCameraInfo(info)) {
+    response->success = false;
+    response->status_message = "failed to save calibration to " + config_.camera_info_url;
+    RCLCPP_ERROR(get_logger(), "%s", response->status_message.c_str());
+    return;
+  }
+
+  calibrated_camera_info_ = camera_info_manager_->getCameraInfo();
+  calibration_loaded_ = camera_info_manager_->isCalibrated();
+  calibration_mismatch_.store(false);
+  response->success = calibration_loaded_;
+  response->status_message = response->success ?
+    "saved calibration to " + config_.camera_info_url :
+    "calibration was saved but is not considered calibrated";
+  RCLCPP_INFO(get_logger(), "%s", response->status_message.c_str());
 }
 
 rcl_interfaces::msg::SetParametersResult HikCameraNode::parametersCallback(
@@ -496,6 +536,11 @@ void HikCameraNode::publishDiagnostics()
   const auto last_frame_ns = last_frame_steady_ns_.load();
   const double frame_age = last_frame_ns == 0 ? -1.0 :
     static_cast<double>(steadyNowNanoseconds() - last_frame_ns) / 1.0e9;
+  bool calibration_loaded = false;
+  {
+    std::lock_guard<std::mutex> lock(calibration_mutex_);
+    calibration_loaded = calibration_loaded_;
+  }
 
   status.values.push_back(keyValue("state", state));
   status.values.push_back(keyValue("transport", transportName(diagnostic_transport)));
@@ -511,7 +556,7 @@ void HikCameraNode::publishDiagnostics()
   status.values.push_back(keyValue("lost_packets", std::to_string(lost_packets_.load())));
   status.values.push_back(
     keyValue("reconnect_attempts", std::to_string(reconnect_attempts_.load())));
-  status.values.push_back(keyValue("calibration_loaded", boolString(calibration_loaded_)));
+  status.values.push_back(keyValue("calibration_loaded", boolString(calibration_loaded)));
   status.values.push_back(
     keyValue("calibration_mismatch", boolString(calibration_mismatch_.load())));
   status.values.push_back(keyValue("output_encoding", config_.output_encoding));

@@ -8,6 +8,7 @@
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <sensor_msgs/srv/set_camera_info.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
@@ -59,6 +60,9 @@ private:
   void triggerCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void setCameraInfoCallback(
+    const std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Request> request,
+    std::shared_ptr<sensor_msgs::srv::SetCameraInfo::Response> response);
   void publishDiagnostics();
 
   void setState(const std::string & state, const std::string & error = "");
@@ -71,6 +75,7 @@ private:
 
   image_transport::CameraPublisher camera_publisher_;
   std::unique_ptr<camera_info_manager::CameraInfoManager> camera_info_manager_;
+  std::mutex calibration_mutex_;
   sensor_msgs::msg::CameraInfo calibrated_camera_info_;
   bool calibration_loaded_{false};
   std::atomic<bool> calibration_mismatch_{false};
@@ -78,6 +83,7 @@ private:
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_publisher_;
   rclcpp::TimerBase::SharedPtr diagnostics_timer_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr trigger_service_;
+  rclcpp::Service<sensor_msgs::srv::SetCameraInfo>::SharedPtr set_camera_info_service_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameters_callback_handle_;
 
   std::atomic<bool> stop_requested_{false};

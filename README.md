@@ -78,6 +78,9 @@ package://hik_camera_driver/config/calibration/front_DA123456.yaml
 `image_height` 必须与实际发布分辨率一致。`config/calibration/example_camera.yaml` 只是未
 标定的格式示例，不能作为真实内参使用。
 
+驱动在相机 namespace 下提供 `set_camera_info` 服务。ROS `camera_calibration` 的
+`COMMIT` 操作会通过该服务更新当前发布的内参，并保存到 `camera_info_url` 指向的文件。
+
 标定方法
 
 ```bash
