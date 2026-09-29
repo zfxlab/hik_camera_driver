@@ -1,5 +1,7 @@
 #include "hik_camera_driver/hik_camera_node.hpp"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <camera_calibration_parsers/parse.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <diagnostic_msgs/msg/key_value.hpp>
 #include <image_transport/image_transport.hpp>
@@ -11,6 +13,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <functional>
 #include <stdexcept>
 #include <utility>
@@ -64,6 +67,31 @@ diagnostic_msgs::msg::KeyValue keyValue(const std::string & key, const std::stri
 std::string boolString(bool value)
 {
   return value ? "true" : "false";
+}
+
+std::filesystem::path calibrationPath(
+  camera_info_manager::CameraInfoManager & manager,
+  const std::string & url, const std::string & camera_name)
+{
+  const std::string resolved = manager.resolveURL(url, camera_name);
+  constexpr char file_prefix[] = "file://";
+  constexpr char package_prefix[] = "package://";
+  if (resolved.rfind(file_prefix, 0) == 0) {
+    return resolved.substr(sizeof(file_prefix) - 1);
+  }
+  if (resolved.rfind(package_prefix, 0) == 0) {
+    const std::size_t package_begin = sizeof(package_prefix) - 1;
+    const std::size_t separator = resolved.find('/', package_begin);
+    if (separator == std::string::npos || separator == package_begin) {
+      throw std::invalid_argument("invalid package camera_info_url: " + resolved);
+    }
+    const std::string package_name = resolved.substr(
+      package_begin, separator - package_begin);
+    return std::filesystem::path(
+      ament_index_cpp::get_package_share_directory(package_name)) /
+      resolved.substr(separator + 1);
+  }
+  throw std::invalid_argument("camera_info_url is not writable: " + resolved);
 }
 
 }  // namespace
@@ -382,19 +410,36 @@ void HikCameraNode::setCameraInfoCallback(
   }
 
   std::lock_guard<std::mutex> lock(calibration_mutex_);
-  if (!camera_info_manager_->setCameraInfo(info)) {
+  std::filesystem::path destination;
+  try {
+    destination = calibrationPath(
+      *camera_info_manager_, config_.camera_info_url, config_.camera_name);
+    const auto parent = destination.parent_path();
+    if (!parent.empty()) {
+      std::filesystem::create_directories(parent);
+    }
+  } catch (const std::exception & error) {
     response->success = false;
-    response->status_message = "failed to save calibration to " + config_.camera_info_url;
+    response->status_message = error.what();
+    RCLCPP_ERROR(get_logger(), "%s", response->status_message.c_str());
+    return;
+  }
+  if (!camera_calibration_parsers::writeCalibration(
+      destination.string(), config_.camera_name, info))
+  {
+    response->success = false;
+    response->status_message = "failed to save calibration to " + destination.string();
     RCLCPP_ERROR(get_logger(), "%s", response->status_message.c_str());
     return;
   }
 
+  camera_info_manager_->setCameraInfo(info);
   calibrated_camera_info_ = camera_info_manager_->getCameraInfo();
   calibration_loaded_ = camera_info_manager_->isCalibrated();
   calibration_mismatch_.store(false);
   response->success = calibration_loaded_;
   response->status_message = response->success ?
-    "saved calibration to " + config_.camera_info_url :
+    "saved calibration to " + destination.string() :
     "calibration was saved but is not considered calibrated";
   RCLCPP_INFO(get_logger(), "%s", response->status_message.c_str());
 }

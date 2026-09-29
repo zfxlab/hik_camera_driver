@@ -9,6 +9,8 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <depend>ament_index_cpp</depend>
+  <depend>camera_calibration_parsers</depend>
   <depend>camera_info_manager</depend>
   <depend>diagnostic_msgs</depend>
   <depend>image_transport</depend>

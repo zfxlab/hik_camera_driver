@@ -11,6 +11,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(camera_calibration_parsers REQUIRED)
 find_package(camera_info_manager REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(image_transport REQUIRED)
@@ -49,6 +51,8 @@ target_include_directories(hik_camera_component
 )
 target_link_libraries(hik_camera_component hik_camera_device)
 ament_target_dependencies(hik_camera_component
+  ament_index_cpp
+  camera_calibration_parsers
   camera_info_manager
   diagnostic_msgs
   image_transport
